@@ -1,6 +1,6 @@
-defmodule Bencode do
+defmodule Bencode.Decoder do
   @moduledoc """
-  Bencoding encoder and decoder.
+  Bencode's encoder and decoder.
 
   See:
 
@@ -12,7 +12,7 @@ defmodule Bencode do
   @doc """
   Decode a bencoded value.
 
-      iex> Bencode.decode("li1e3:twoli3eee")
+      iex> Bencode.Decoder.decode("li1e3:twoli3eee")
       {:ok, [1, "two", [3]]}
 
   """
@@ -33,6 +33,7 @@ defmodule Bencode do
   end
 
   # Parsing string
+
   ## Getting string length
   defp parse_string(str) do
     {:ok, length, rest} = get_string_length(str, [])
@@ -43,6 +44,7 @@ defmodule Bencode do
   end
   defp get_string_length(":" <> rest, acc), do: {:ok, acc |> Enum.reverse() |> List.to_integer, rest}
   defp get_string_length(other, acc), do: {:err, other, acc}
+
   ## Getting string content
   defp get_string_content(0, str), do: {"", str}
   defp get_string_content(length, str) do
@@ -76,5 +78,59 @@ defmodule Bencode do
     {key, rest}   = parse_string(iodata)
     {value, rest} = parse(rest)
     parse_dictionary(rest, Map.put(acc, key, value))
+  end
+end
+
+defprotocol Bencode.Encoder do
+  @moduledoc """
+  Protocol to encode elixir data types to Bencode.
+
+    iex> Bencode.Encoder.encode("foo") |> IO.iodata_to_binary()
+    "3:foo"
+
+    iex> Bencode.Encoder.encode([1, "two", [3]]) |> IO.iodata_to_binary()
+    "li1e3:twoli4eee"
+  """
+  @spec encode(t) :: String.t()
+  def encode(value)
+end
+
+defimpl Bencode.Encoder, for: Atom do
+  def encode(nil), do: "4:null"
+  def encode(true), do: "4:true"
+  def encode(false), do: "5:false"
+  def encode(atom) do
+    atom |> Atom.to_string() |> Bencode.Encoder.BitString.encode()
+  end
+end
+
+defimpl Bencode.Encoder, for: BitString do
+  def encode(string) do
+    [string |> byte_size() |> Integer.to_string(), ?:, string]
+  end
+end
+
+defimpl Bencode.Encoder, for: Integer do
+  def encode(value) do
+    [?i, value |> Integer.to_string(), ?e]
+  end
+end
+
+defimpl Bencode.Encoder, for: Map do
+  def encode(map) when map_size(map) == 0, do: "de"
+  def encode(map) do
+    encode_key_value = fn key -> [
+      Bencode.Encoder.BitString.encode(Atom.to_string(key)),
+      Bencode.Encoder.encode(Map.get(map, key))
+    ] end
+
+    [?d, map |> Map.keys() |> Enum.map(encode_key_value), ?e]
+  end
+end
+
+defimpl Bencode.Encoder, for: [List, Range, Stream] do
+  def encode([]), do: "le"
+  def encode(enum) do
+    [?l, enum |> Enum.map(&Bencode.Encoder.encode/1), ?e]
   end
 end
