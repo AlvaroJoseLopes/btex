@@ -120,7 +120,7 @@ defimpl Bencode.Encoder, for: Map do
   def encode(map) when map_size(map) == 0, do: "de"
   def encode(map) do
     encode_key_value = fn key -> [
-      Bencode.Encoder.BitString.encode(Atom.to_string(key)),
+      Bencode.Encoder.BitString.encode(key),
       Bencode.Encoder.encode(Map.get(map, key))
     ] end
 
