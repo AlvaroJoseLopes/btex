@@ -1,6 +1,6 @@
 # Btex
 
-BitTorrent in elixir.
+BitTorrent Client in elixir.
 
 ## Installation
 

@@ -25,6 +25,6 @@ defmodule Peer do
       |> Integer.to_string()
       |> String.pad_leading(12, "0")
 
-    <<"-PY">> <> <<@version>> <> <<"-">> <> <<rand_number::binary>>
+    <<"-EX">> <> <<@version>> <> <<"-">> <> <<rand_number::binary>>
   end
 end
