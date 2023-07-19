@@ -18,6 +18,7 @@ defmodule Bencode.Decoder do
   """
   def decode(iodata) do
     {result, rest} = iodata |> IO.iodata_to_binary() |> parse()
+
     case rest do
       "" -> {:ok, result}
       _ -> {:err, rest}
@@ -28,6 +29,7 @@ defmodule Bencode.Decoder do
   defp parse("l" <> rest), do: parse_list(rest, [])
   defp parse("i" <> rest), do: parse_integer(rest, [])
   defp parse("d" <> rest), do: parse_dictionary(rest, %{})
+
   defp parse(<<d>> <> _ = str) when d in @digits do
     parse_string(str)
   end
@@ -39,14 +41,19 @@ defmodule Bencode.Decoder do
     {:ok, length, rest} = get_string_length(str, [])
     get_string_content(length, rest)
   end
+
   defp get_string_length(<<d>> <> rest, acc) when d in @digits do
     get_string_length(rest, [d | acc])
   end
-  defp get_string_length(":" <> rest, acc), do: {:ok, acc |> Enum.reverse() |> List.to_integer, rest}
+
+  defp get_string_length(":" <> rest, acc),
+    do: {:ok, acc |> Enum.reverse() |> List.to_integer(), rest}
+
   defp get_string_length(other, acc), do: {:err, other, acc}
 
   ## Getting string content
   defp get_string_content(0, str), do: {"", str}
+
   defp get_string_content(length, str) do
     <<content::binary-size(length)>> <> rest = str
     {content, rest}
@@ -56,16 +63,20 @@ defmodule Bencode.Decoder do
   defp parse_integer("-e" <> rest, _acc), do: {:err, rest}
   defp parse_integer("-0" <> rest, _acc), do: {:err, rest}
   defp parse_integer("0e" <> rest, _acc), do: {0, rest}
+
   defp parse_integer(<<n>> <> rest, acc) when n in @digits do
     parse_integer(rest, [n | acc])
   end
+
   defp parse_integer("e" <> rest, acc) do
     {acc |> Enum.reverse() |> List.to_integer(), rest}
   end
+
   defp parse_integer(other, _acc), do: {:err, other}
 
   # Parsing list
   defp parse_list("e" <> rest, acc), do: {acc |> Enum.reverse(), rest}
+
   defp parse_list(iodata, acc) do
     {result, rest} = parse(iodata)
     acc = [result | acc]
@@ -74,8 +85,9 @@ defmodule Bencode.Decoder do
 
   # Parsing Dictionary
   defp parse_dictionary("e" <> rest, acc), do: {acc, rest}
+
   defp parse_dictionary(iodata, acc) do
-    {key, rest}   = parse_string(iodata)
+    {key, rest} = parse_string(iodata)
     {value, rest} = parse(rest)
     parse_dictionary(rest, Map.put(acc, key, value))
   end
@@ -99,6 +111,7 @@ defimpl Bencode.Encoder, for: Atom do
   def encode(nil), do: "4:null"
   def encode(true), do: "4:true"
   def encode(false), do: "5:false"
+
   def encode(atom) do
     atom |> Atom.to_string() |> Bencode.Encoder.BitString.encode()
   end
@@ -118,11 +131,14 @@ end
 
 defimpl Bencode.Encoder, for: Map do
   def encode(map) when map_size(map) == 0, do: "de"
+
   def encode(map) do
-    encode_key_value = fn key -> [
-      Bencode.Encoder.BitString.encode(key),
-      Bencode.Encoder.encode(Map.get(map, key))
-    ] end
+    encode_key_value = fn key ->
+      [
+        Bencode.Encoder.BitString.encode(key),
+        Bencode.Encoder.encode(Map.get(map, key))
+      ]
+    end
 
     [?d, map |> Map.keys() |> Enum.map(encode_key_value), ?e]
   end
@@ -130,6 +146,7 @@ end
 
 defimpl Bencode.Encoder, for: [List, Range, Stream] do
   def encode([]), do: "le"
+
   def encode(enum) do
     [?l, enum |> Enum.map(&Bencode.Encoder.encode/1), ?e]
   end

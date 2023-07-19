@@ -3,11 +3,16 @@ defmodule Peer do
   Peer module.
   """
 
-  @version  "0001"
-  @port      6889
+  @version "0001"
+  @port 6889
 
   defstruct [
-    :id, :port, version: @version, uploaded: 0, downloaded: 0, compact: 1
+    :id,
+    :port,
+    version: @version,
+    uploaded: 0,
+    downloaded: 0,
+    compact: 1
   ]
 
   def fetch(map, key), do: Map.fetch(map, key)
@@ -21,7 +26,7 @@ defmodule Peer do
 
   defp generate_id() do
     rand_number =
-      :rand.uniform(1000000000000) - 1
+      (:rand.uniform(1_000_000_000_000) - 1)
       |> Integer.to_string()
       |> String.pad_leading(12, "0")
 
