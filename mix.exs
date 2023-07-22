@@ -21,7 +21,8 @@ defmodule Btex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:httpoison, "~> 2.0"}
+      {:httpoison, "~> 2.0"},
+      {:socket, "~> 0.3"}
     ]
   end
 end
